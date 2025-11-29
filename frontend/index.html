@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADO Assistant - Azure DevOps AI Query Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0078d4 0%, #40e0d0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #0078d4;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        .connection-status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .connection-status.disconnected {
+            background: #f44336;
+            color: white;
+        }
+        
+        .connection-status.ado-connected {
+            background: #0078d4;
+            color: white;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .config-section {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .config-label {
+            font-weight: bold;
+            color: #333;
+            padding-top: 0.5rem;
+        }
+        
+        .config-input {
+            padding: 0.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .config-input:focus {
+            outline: none;
+            border-color: #0078d4;
+        }
+        
+        .config-btn {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .config-btn:hover {
+            background: #005ba1;
+        }
+        
+        .quick-queries {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .quick-btn {
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            border: 2px solid #d0d0d0;
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .quick-btn:hover {
+            background: linear-gradient(135deg, #0078d4, #005ba1);
+            color: white;
+            border-color: #0078d4;
+            transform: translateY(-2px);
+        }
+        
+        .quick-btn .icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .query-section {
+            margin-bottom: 2rem;
+        }
+        
+        .query-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            margin-bottom: 1rem;
+        }
+        
+        .query-input:focus {
+            outline: none;
+            border-color: #0078d4;
+        }
+        
+        .query-btn {
+            background: linear-gradient(135deg, #0078d4, #40e0d0);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .query-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 120, 212, 0.3);
+        }
+        
+        .query-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .response-area {
+            background: #f0f9ff;
+            border-left: 4px solid #0078d4;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+            display: none;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .response-area.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .response-header {
+            color: #0078d4;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .response-text {
+            color: #333;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .response-metadata {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0078d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0078d4;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .error-message {
+            background: #fee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            border-radius: 5px;
+            color: #d00;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .error-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 ADO Assistant</h1>
+            <p class="subtitle">AI-Powered Azure DevOps Query Tool</p>
+        </div>
+        
+        <div class="config-section">
+            <h3 style="margin-bottom: 1rem; color: #0078d4;">Configuration</h3>
+            <div class="config-row">
+                <div class="config-label">Organization:</div>
+                <input type="text" class="config-input" id="orgInput" placeholder="your-organization">
+            </div>
+            <div class="config-row">
+                <div class="config-label">Project:</div>
+                <input type="text" class="config-input" id="projectInput" placeholder="your-project">
+            </div>
+            <div class="config-row">
+                <div class="config-label">PAT Token:</div>
+                <input type="password" class="config-input" id="patInput" placeholder="Your Personal Access Token">
+            </div>
+            <div style="text-align: right; margin-top: 1rem;">
+                <button class="config-btn" onclick="saveConfig()">Save Configuration</button>
+            </div>
+        </div>
+        
+        <div class="quick-queries">
+            <button class="quick-btn" onclick="quickQuery('Show me all open bugs')">
+                <span class="icon">🐛</span>
+                <span>Open Bugs</span>
+            </button>
+            <button class="quick-btn" onclick="quickQuery('What work items are assigned to me?')">
+                <span class="icon">👤</span>
+                <span>My Items</span>
+            </button>
+            <button class="quick-btn" onclick="quickQuery('Show current sprint status')">
+                <span class="icon">📊</span>
+                <span>Sprint Status</span>
+            </button>
+            <button class="quick-btn" onclick="quickQuery('List recent pull requests')">
+                <span class="icon">🔀</span>
+                <span>Pull Requests</span>
+            </button>
+            <button class="quick-btn" onclick="quickQuery('Show build pipeline status')">
+                <span class="icon">⚙️</span>
+                <span>Builds</span>
+            </button>
+            <button class="quick-btn" onclick="quickQuery('What are the critical issues?')">
+                <span class="icon">🚨</span>
+                <span>Critical Issues</span>
+            </button>
+        </div>
+        
+        <div class="query-section">
+            <textarea 
+                class="query-input" 
+                id="queryInput" 
+                placeholder="Ask anything about your Azure DevOps project... Examples:
+- How many bugs were closed this week?
+- Show me high priority user stories
+- What's the status of the latest deployment?
+- Who has the most assigned work items?"
+                rows="4"
+            ></textarea>
+            <button class="query-btn" id="queryBtn" onclick="sendQuery()">
+                🔍 Ask ADO Assistant
+            </button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: #666;">Querying Azure DevOps...</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="response-area" id="responseArea">
+            <div class="response-header">Response:</div>
+            <div class="response-text" id="responseText"></div>
+            <div class="response-metadata" id="responseMetadata"></div>
+        </div>
+        
+        <div class="stats-bar" id="statsBar" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-value" id="queryCount">0</div>
+                <div class="stat-label">Queries Made</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="itemsFound">0</div>
+                <div class="stat-label">Items Found</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="responseTime">0ms</div>
+                <div class="stat-label">Response Time</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let queryCount = 0;
+        let config = {
+            organization: '',
+            project: '',
+            pat: ''
+        };
+        
+        // Load config from localStorage on start
+        window.onload = function() {
+            loadConfig();
+            checkBackendConnection();
+            setInterval(checkBackendConnection, 10000);
+        };
+        
+        function loadConfig() {
+            const saved = localStorage.getItem('adoConfig');
+            if (saved) {
+                config = JSON.parse(saved);
+                document.getElementById('orgInput').value = config.organization || '';
+                document.getElementById('projectInput').value = config.project || '';
+                document.getElementById('patInput').value = config.pat || '';
+            }
+        }
+        
+        function saveConfig() {
+            config.organization = document.getElementById('orgInput').value;
+            config.project = document.getElementById('projectInput').value;
+            config.pat = document.getElementById('patInput').value;
+            
+            localStorage.setItem('adoConfig', JSON.stringify(config));
+            
+            showConnectionStatus('ado-connected', '✓ Configuration Saved');
+            
+            // Test ADO connection
+            testADOConnection();
+        }
+        
+        async function checkBackendConnection() {
+            try {
+                const response = await fetch(`${API_URL}/`);
+                const data = await response.json();
+                console.log('Backend status:', data);
+                
+                showConnectionStatus('connected', '✓ Backend Connected');
+                
+            } catch (error) {
+                console.error('Backend not connected:', error);
+                showConnectionStatus('disconnected', '⚠️ Backend Disconnected');
+            }
+        }
+        
+        async function testADOConnection() {
+            if (!config.organization || !config.pat) {
+                showError('Please configure organization and PAT token first');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/test-connection`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                
+                if (data.connected) {
+                    showConnectionStatus('ado-connected', `✓ ADO Connected: ${data.project_count} projects`);
+                } else {
+                    showError('Failed to connect to Azure DevOps. Check your configuration.');
+                }
+                
+            } catch (error) {
+                showError('Error testing ADO connection');
+            }
+        }
+        
+        function showConnectionStatus(statusClass, message) {
+            const existingStatus = document.querySelector('.connection-status');
+            if (existingStatus) {
+                existingStatus.remove();
+            }
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `connection-status ${statusClass}`;
+            statusDiv.textContent = message;
+            document.body.appendChild(statusDiv);
+            
+            setTimeout(() => statusDiv.remove(), 5000);
+        }
+        
+        function quickQuery(query) {
+            document.getElementById('queryInput').value = query;
+            sendQuery();
+        }
+        
+        async function sendQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            
+            if (!query) {
+                showError('Please enter a query');
+                return;
+            }
+            
+            if (!config.organization || !config.pat) {
+                showError('Please configure ADO connection first');
+                return;
+            }
+            
+            const startTime = Date.now();
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('responseArea').classList.remove('active');
+            document.getElementById('errorMessage').classList.remove('active');
+            document.getElementById('queryBtn').disabled = true;
+            
+            try {
+                const response = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        config: config
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResponse(data);
+                    updateStats(data, Date.now() - startTime);
+                } else {
+                    showError(data.error || 'Query failed');
+                }
+                
+            } catch (error) {
+                console.error('Query error:', error);
+                showError('Failed to process query. Check backend connection.');
+                
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('queryBtn').disabled = false;
+            }
+        }
+        
+        function displayResponse(data) {
+            document.getElementById('responseText').textContent = data.answer;
+            
+            // Format metadata
+            let metadata = `Query Type: ${data.query_type || 'General'}`;
+            if (data.items_found !== undefined) {
+                metadata += ` | Items Found: ${data.items_found}`;
+            }
+            if (data.api_calls) {
+                metadata += ` | API Calls: ${data.api_calls}`;
+            }
+            metadata += ` | Timestamp: ${new Date(data.timestamp).toLocaleTimeString()}`;
+            
+            document.getElementById('responseMetadata').textContent = metadata;
+            document.getElementById('responseArea').classList.add('active');
+        }
+        
+        function updateStats(data, responseTime) {
+            queryCount++;
+            document.getElementById('queryCount').textContent = queryCount;
+            document.getElementById('itemsFound').textContent = data.items_found || '0';
+            document.getElementById('responseTime').textContent = `${responseTime}ms`;
+            document.getElementById('statsBar').style.display = 'grid';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = `Error: ${message}`;
+            errorDiv.classList.add('active');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('active');
+            }, 5000);
+        }
+        
+        // Handle Enter key in textarea
+        document.getElementById('queryInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendQuery();
+            }
+        });
+    </script>
+</body>
+</html>
