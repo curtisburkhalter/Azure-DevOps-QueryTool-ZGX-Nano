@@ -1,0 +1,9 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.24.0
+requests>=2.31.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+
+# Optional: For LLM support (comment out if not needed)
+transformers>=4.35.0
+torch>=2.2.0
