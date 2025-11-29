@@ -241,6 +241,6 @@ The LLM component (Microsoft Phi-3-mini) is optional. If it fails to load:
 - All Azure DevOps API calls use HTTPS
 - The backend runs on localhost by default; network exposure is optional
 
-## License
+## Support
 
-MIT License
+If you have questions about this demo contact Curtis Burkhalter at curtisburkhalter@gmail.com
